@@ -26,6 +26,7 @@ contract GestionMateriasContract {
         uint creditos;
         bool activa;
         uint totalHorarios;
+        address[] estudiantes;
         mapping(uint => Horario) horarios;
     }
 
@@ -40,6 +41,7 @@ contract GestionMateriasContract {
     event MateriaActualizada(uint id, string nombre);
     event HorarioAgregado(uint id, uint8 dia, uint8 horaInicio, uint8 horaFin);
     event UsuarioRegistrado(address direccion, Rol rol);
+    event EstudianteRegistradoEnMateria(uint materiaId, address estudiante);
 
     constructor() {
         admin = msg.sender;
@@ -65,7 +67,7 @@ contract GestionMateriasContract {
 
     function obtenerMateria(uint _id) public view returns (string memory, string memory, uint, bool, uint) {
         require(_id >= 0 && _id <= totalMaterias, "ID de materia invalido");
-
+    
         Materia storage materia = materias[_id];
         return (materia.nombre, materia.descripcion, materia.creditos, materia.activa, materia.totalHorarios);
     }
@@ -135,4 +137,43 @@ contract GestionMateriasContract {
         Horario storage horario = materias[_materiaId].horarios[_horarioId];
         return (horario.dia, horario.horaInicio, horario.horaFin);
     }
+
+    function registrarEstudianteEnMateria(uint _materiaId) public {
+        require(_materiaId >= 0 && _materiaId <= totalMaterias, "ID de materia invalido");
+        require(materias[_materiaId].activa, "La materia no existe o ha sido eliminada");
+        require(usuarios[msg.sender].rol == Rol.Estudiante, "Solo estudiantes pueden registrarse en materias");
+
+        Materia storage materia = materias[_materiaId];
+        for (uint i = 0; i < materia.estudiantes.length; i++) {
+            require(materia.estudiantes[i] != msg.sender, "Estudiante ya registrado en la materia");
+        }
+        materia.estudiantes.push(msg.sender);
+        emit EstudianteRegistradoEnMateria(_materiaId, msg.sender);
+    }
+
+    function obtenerMateriasDeEstudiante() public view returns (uint[] memory) {
+        require(usuarios[msg.sender].activo, "Usuario no registrado");
+        require(usuarios[msg.sender].rol == Rol.Estudiante, "Solo los estudiantes pueden tener materias inscritas");
+        uint[] memory materiasEstudiante = new uint[](totalMaterias);
+        uint contador = 0;
+
+        for (uint i = 1; i < totalMaterias; i++) {
+            Materia storage materia = materias[i];
+            for (uint j = 0; j < materia.estudiantes.length; j++) {
+                if(materia.estudiantes[j] == msg.sender) {
+                    materiasEstudiante[contador] = i;
+                    contador++;
+                    break;
+                }
+            }
+        }
+
+        uint[] memory resultado = new uint[](contador);
+        for (uint i = 0; i < contador; i++) {
+            resultado[i] = materiasEstudiante[i];
+        }
+
+        return resultado;
+    }
+
 }

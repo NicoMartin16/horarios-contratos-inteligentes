@@ -2,7 +2,7 @@
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import { expect } from "chai";
 import { ContractTransactionResponse } from "ethers";
-import hre from "hardhat";
+import hre, { ethers } from "hardhat";
 
 describe("GestionMateriasContract", () => {
 
@@ -15,6 +15,21 @@ describe("GestionMateriasContract", () => {
     }
     
     describe("Deployment", () => {
+
+        it('debe registrar un nuevo estudiante', async () => {
+            // Arrange
+            const { gestionMateriasContract } = await loadFixture(deployGestionMateriasContractFixture);
+            const [address1, address2, address3] = await ethers.getSigners();
+            // Act
+            const result = await gestionMateriasContract.registrarUsuario(address2.address, 0);
+            // Assert
+            const usuario = await gestionMateriasContract.usuarios(address2.address);
+            expect(result).to.be.ok;
+            expect(usuario[0]).to.equal(address2.address);
+            expect(usuario[2]).to.be.true;
+        });
+        
+
         it("Debe crear una nueva materia", async () => {
             // Arrange
             const { materiaCreada } = await loadFixture(deployGestionMateriasContractFixture);
@@ -94,6 +109,19 @@ describe("GestionMateriasContract", () => {
             expect(result[0]).to.equal(1);
             expect(result[1]).to.equal(8);
             expect(result[2]).to.equal(10);
+        });
+
+        it("Debe registrar un estudiante a una materia", async () => {
+            //Arrange
+            const { gestionMateriasContract } = await loadFixture(deployGestionMateriasContractFixture);
+            const [address1, address2, address3] = await ethers.getSigners();
+            await gestionMateriasContract.crearMateria("Calculo diferencial", "Se estudian los principios del calculo diferencial", 3);
+            await gestionMateriasContract.registrarUsuario(address2.address, 0);
+            // Act
+            const result = await gestionMateriasContract.connect(address2).registrarEstudianteEnMateria(1);
+            const materiasAsignadas = await gestionMateriasContract.connect(address2).obtenerMateriasDeEstudiante();
+            // Assert
+            expect(materiasAsignadas[0]).to.equal(1);
         });
 
     });
